@@ -1,0 +1,89 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "Timestamp": {
+      "Type": "String",
+      "Description": "Timestamp used in all Lambda ZIP files."
+    }
+  },
+  "Mappings": {},
+  "Conditions": {},
+  "Resources": {
+    "MyExample": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "my_example",
+        "Handler": "my_example.lambda_handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "MyExampleRole",
+            "Arn"
+          ]
+        },
+        "Code": {
+          "S3Bucket": "custom-resources-deployment",
+          "S3Key": {
+            "Fn::Sub": "${Timestamp}my_example.zip"
+          }
+        },
+        "Timeout": 30,
+        "Runtime": "python3.6"
+      }
+    },
+    "MyExampleRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "my_example_role",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "my_example_policy",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                  {
+                    "Action": [
+                      "logs:CreateLogGroup",
+                      "logs:CreateLogStream",
+                      "logs:PutLogEvents",
+                      "logs:DescribeLogStreams"
+                    ],
+                    "Resource": [
+                      "arn:aws:logs:*:*:*"
+                    ],
+                    "Effect": "Allow"
+                  }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "MyExampleLambdaVersion": {
+      "Type": "Custom::LambdaVersion",
+      "Properties": {
+        "ServiceToken": {
+            "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:custom_resources"
+        },
+        "FunctionName": {
+          "Ref": "MyExample"
+        },
+        "Description":  {
+            "Fn::Sub": "Updated at ${Timestamp}"
+        }
+      }
+    }
+  }
+}
